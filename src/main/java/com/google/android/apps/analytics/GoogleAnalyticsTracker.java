@@ -48,52 +48,52 @@ public class GoogleAnalyticsTracker
     return INSTANCE;
   }
 
-  public void start(String paramString, int paramInt, Context paramContext)
+  public void start(String accountId, int dispatchPeriod, Context parentContext)
   {
-    Object localObject1 = null;
-    Object localObject2 = null;
+	EventStore eventStore = null;
+	Dispatcher dispatcher = null;
     if (this.eventStore == null)
-      localObject1 = new PersistentEventStore(new PersistentEventStore.DataBaseHelper(paramContext));
+      eventStore = new PersistentEventStore(new PersistentEventStore.DataBaseHelper(parentContext));
     else
-      localObject1 = this.eventStore;
+      eventStore = this.eventStore;
     if (this.dispatcher == null)
     {
-      localObject2 = new NetworkDispatcher(this.userAgentProduct, this.userAgentVersion);
-      ((Dispatcher)localObject2).setDryRun(this.dryRun);
+      dispatcher = new NetworkDispatcher(this.userAgentProduct, this.userAgentVersion);
+      dispatcher.setDryRun(this.dryRun);
     }
     else
     {
-      localObject2 = this.dispatcher;
+      dispatcher = this.dispatcher;
     }
-    start(paramString, paramInt, paramContext, (EventStore)localObject1, (Dispatcher)localObject2);
+    start(accountId, dispatchPeriod, parentContext, eventStore, dispatcher);
   }
 
-  public void start(String paramString, Context paramContext)
+  public void start(String accountId, Context parentContext)
   {
-    start(paramString, -1, paramContext);
+    start(accountId, -1, parentContext);
   }
 
-  void start(String paramString, int paramInt, Context paramContext, EventStore paramEventStore, Dispatcher paramDispatcher)
+  void start(String accountId, int dispatchPeriod, Context parentContext, EventStore eventStore, Dispatcher dispatcher)
   {
-    start(paramString, paramInt, paramContext, paramEventStore, paramDispatcher, new DispatcherCallbacks());
+    start(accountId, dispatchPeriod, parentContext, eventStore, dispatcher, new DispatcherCallbacks());
   }
 
-  void start(String paramString, int paramInt, Context paramContext, EventStore paramEventStore, Dispatcher paramDispatcher, Dispatcher.Callbacks paramCallbacks)
+  void start(String accountId, int dispatchPeriod, Context parentContext, EventStore eventStore, Dispatcher dispatcher, Dispatcher.Callbacks dispatcherCallbacks)
   {
-    this.accountId = paramString;
-    this.parent = paramContext;
-    this.eventStore = paramEventStore;
+    this.accountId = accountId;
+    this.parent = parentContext;
+    this.eventStore = eventStore;
     this.eventStore.startNewVisit();
-    this.dispatcher = paramDispatcher;
-    this.dispatcher.init(paramCallbacks, this.eventStore.getReferrer());
+    this.dispatcher = dispatcher;
+    this.dispatcher.init(dispatcherCallbacks, this.eventStore.getReferrer());
     this.dispatcherIsBusy = false;
     if (this.connetivityManager == null)
       this.connetivityManager = ((ConnectivityManager)this.parent.getSystemService("connectivity"));
     if (this.handler == null)
-      this.handler = new Handler(paramContext.getMainLooper());
+      this.handler = new Handler(parentContext.getMainLooper());
     else
       cancelPendingDispatches();
-    setDispatchPeriod(paramInt);
+    setDispatchPeriod(dispatchPeriod);
   }
 
   Dispatcher getDispatcher()
@@ -101,10 +101,10 @@ public class GoogleAnalyticsTracker
     return this.dispatcher;
   }
 
-  public void setProductVersion(String paramString1, String paramString2)
+  public void setProductVersion(String userAgentProduct, String userAgentVersion)
   {
-    this.userAgentProduct = paramString1;
-    this.userAgentVersion = paramString2;
+    this.userAgentProduct = userAgentProduct;
+    this.userAgentVersion = userAgentVersion;
   }
 
   public void trackEvent(String paramString1, String paramString2, String paramString3, int paramInt)
@@ -112,9 +112,9 @@ public class GoogleAnalyticsTracker
     createEvent(this.accountId, paramString1, paramString2, paramString3, paramInt);
   }
 
-  public void trackPageView(String paramString)
+  public void trackPageView(String page)
   {
-    createEvent(this.accountId, "__##GOOGLEPAGEVIEW##__", paramString, null, -1);
+    createEvent(this.accountId, "__##GOOGLEPAGEVIEW##__", page, null, -1);
   }
 
   private void createEvent(String paramString1, String paramString2, String paramString3, String paramString4, int paramInt)
@@ -126,10 +126,10 @@ public class GoogleAnalyticsTracker
     resetPowerSaveMode();
   }
 
-  public void setDispatchPeriod(int paramInt)
+  public void setDispatchPeriod(int dispatchPeriod)
   {
     int i = this.dispatchPeriod;
-    this.dispatchPeriod = paramInt;
+    this.dispatchPeriod = dispatchPeriod;
     if (i <= 0)
     {
       maybeScheduleNextDispatch();
@@ -174,8 +174,8 @@ public class GoogleAnalyticsTracker
       maybeScheduleNextDispatch();
       return false;
     }
-    NetworkInfo localNetworkInfo = this.connetivityManager.getActiveNetworkInfo();
-    if ((localNetworkInfo == null) || (!localNetworkInfo.isAvailable()))
+    NetworkInfo networkInfo = this.connetivityManager.getActiveNetworkInfo();
+    if ((networkInfo == null) || (!networkInfo.isAvailable()))
     {
       if (this.debug)
         Log.v("GoogleAnalyticsTracker", "...but there was no network available");
@@ -184,12 +184,12 @@ public class GoogleAnalyticsTracker
     }
     if (this.eventStore.getNumStoredEvents() != 0)
     {
-      Event[] arrayOfEvent = this.eventStore.peekEvents();
-      this.dispatcher.dispatchEvents(arrayOfEvent);
+      Event[] events = this.eventStore.peekEvents();
+      this.dispatcher.dispatchEvents(events);
       this.dispatcherIsBusy = true;
       maybeScheduleNextDispatch();
       if (this.debug)
-        Log.v("GoogleAnalyticsTracker", "Sending " + arrayOfEvent.length + " to dispatcher");
+        Log.v("GoogleAnalyticsTracker", "Sending " + events.length + " to dispatcher");
       return true;
     }
     this.powerSaveMode = true;
@@ -214,11 +214,11 @@ public class GoogleAnalyticsTracker
     return this.eventStore;
   }
 
-  public boolean setCustomVar(int paramInt1, String paramString1, String paramString2, int paramInt2)
+  public boolean setCustomVar(int index, String name, String value, int scope)
   {
     try
     {
-      CustomVariable localCustomVariable = new CustomVariable(paramInt1, paramString1, paramString2, paramInt2);
+      CustomVariable localCustomVariable = new CustomVariable(index, name, value, scope);
       if (this.customVariableBuffer == null)
         this.customVariableBuffer = new CustomVariableBuffer();
       this.customVariableBuffer.setCustomVariable(localCustomVariable);
@@ -230,60 +230,60 @@ public class GoogleAnalyticsTracker
     return true;
   }
 
-  public boolean setCustomVar(int paramInt, String paramString1, String paramString2)
+  public boolean setCustomVar(int index, String name, String value)
   {
-    return setCustomVar(paramInt, paramString1, paramString2, 3);
+    return setCustomVar(index, name, value, 3);
   }
 
-  public String getVisitorCustomVar(int paramInt)
+  public String getVisitorCustomVar(int index)
   {
-    if ((paramInt < 1) || (paramInt > 5))
+    if ((index < 1) || (index > 5))
       throw new IllegalArgumentException("Index must be between 1 and 5 inclusive.");
-    return this.eventStore.getVisitorCustomVar(paramInt);
+    return this.eventStore.getVisitorCustomVar(index);
   }
 
-  public void addTransaction(Transaction paramTransaction)
+  public void addTransaction(Transaction transaction)
   {
-    this.transactionMap.put(paramTransaction.getOrderId(), paramTransaction);
+    this.transactionMap.put(transaction.getOrderId(), transaction);
   }
 
-  public void addItem(Item paramItem)
+  public void addItem(Item item)
   {
-    Transaction localTransaction = (Transaction)this.transactionMap.get(paramItem.getOrderId());
-    if (localTransaction == null)
+    Transaction transaction = (Transaction)this.transactionMap.get(item.getOrderId());
+    if (transaction == null)
     {
-      Log.i("GoogleAnalyticsTracker", "No transaction with orderId " + paramItem.getOrderId() + " found, creating one");
-      localTransaction = new Transaction.Builder(paramItem.getOrderId(), 0.0D).build();
-      this.transactionMap.put(paramItem.getOrderId(), localTransaction);
+      Log.i("GoogleAnalyticsTracker", "No transaction with orderId " + item.getOrderId() + " found, creating one");
+      transaction = new Transaction.Builder(item.getOrderId(), 0.0D).build();
+      this.transactionMap.put(item.getOrderId(), transaction);
     }
-    Map<String,Item> localObject = (Map<String,Item> )this.itemMap.get(paramItem.getOrderId());
-    if (localObject == null)
+    Map<String,Item> items = (Map<String,Item> )this.itemMap.get(item.getOrderId());
+    if (items == null)
     {
-      localObject = new HashMap<String,Item>();
-      this.itemMap.put(paramItem.getOrderId(), localObject);
+      items = new HashMap<String,Item>();
+      this.itemMap.put(item.getOrderId(), items);
     }
-    localObject.put(paramItem.getItemSKU(), paramItem);
+    items.put(item.getItemSKU(), item);
   }
 
   public void trackTransactions()
   {
-    Iterator localIterator1 = this.transactionMap.values().iterator();
-    while (localIterator1.hasNext())
+    Iterator transactionIterator = this.transactionMap.values().iterator();
+    while (transactionIterator.hasNext())
     {
-      Transaction localTransaction = (Transaction)localIterator1.next();
-      Event localEvent = new Event(this.eventStore.getStoreId(), this.accountId, "__##GOOGLETRANSACTION##__", "", "", 0, this.parent.getResources().getDisplayMetrics().widthPixels, this.parent.getResources().getDisplayMetrics().heightPixels);
-      localEvent.setTransaction(localTransaction);
-      this.eventStore.putEvent(localEvent);
-      Map localMap = (Map)this.itemMap.get(localTransaction.getOrderId());
-      if (localMap != null)
+      Transaction transaction = (Transaction)transactionIterator.next();
+      Event event = new Event(this.eventStore.getStoreId(), this.accountId, "__##GOOGLETRANSACTION##__", "", "", 0, this.parent.getResources().getDisplayMetrics().widthPixels, this.parent.getResources().getDisplayMetrics().heightPixels);
+      event.setTransaction(transaction);
+      this.eventStore.putEvent(event);
+      Map items = (Map)this.itemMap.get(transaction.getOrderId());
+      if (items != null)
       {
-        Iterator localIterator2 = localMap.values().iterator();
-        while (localIterator2.hasNext())
+        Iterator itemIterator = items.values().iterator();
+        while (itemIterator.hasNext())
         {
-          Item localItem = (Item)localIterator2.next();
-          localEvent = new Event(this.eventStore.getStoreId(), this.accountId, "__##GOOGLEITEM##__", "", "", 0, this.parent.getResources().getDisplayMetrics().widthPixels, this.parent.getResources().getDisplayMetrics().heightPixels);
-          localEvent.setItem(localItem);
-          this.eventStore.putEvent(localEvent);
+          Item item = (Item)itemIterator.next();
+          event = new Event(this.eventStore.getStoreId(), this.accountId, "__##GOOGLEITEM##__", "", "", 0, this.parent.getResources().getDisplayMetrics().widthPixels, this.parent.getResources().getDisplayMetrics().heightPixels);
+          event.setItem(item);
+          this.eventStore.putEvent(event);
         }
       }
     }
@@ -297,9 +297,9 @@ public class GoogleAnalyticsTracker
     this.itemMap.clear();
   }
 
-  public void setDebug(boolean paramBoolean)
+  public void setDebug(boolean debug)
   {
-    this.debug = paramBoolean;
+    this.debug = debug;
   }
 
   public boolean getDebug()
@@ -307,11 +307,11 @@ public class GoogleAnalyticsTracker
     return this.debug;
   }
 
-  public void setDryRun(boolean paramBoolean)
+  public void setDryRun(boolean dryRun)
   {
-    this.dryRun = paramBoolean;
+    this.dryRun = dryRun;
     if (this.dispatcher != null)
-      this.dispatcher.setDryRun(paramBoolean);
+      this.dispatcher.setDryRun(dryRun);
   }
 
   public boolean isDryRun()
@@ -337,9 +337,9 @@ public class GoogleAnalyticsTracker
       });
     }
 
-    public void eventDispatched(long paramLong)
+    public void eventDispatched(long eventId)
     {
-      GoogleAnalyticsTracker.this.eventStore.deleteEvent(paramLong);
+      GoogleAnalyticsTracker.this.eventStore.deleteEvent(eventId);
     }
   }
 }
