@@ -13,29 +13,29 @@ class CustomVariable
   private final String value;
   private final int index;
 
-  public CustomVariable(int paramInt1, String paramString1, String paramString2, int paramInt2)
+  public CustomVariable(int index, String name, String value, int scope)
   {
-    if ((paramInt2 != 1) && (paramInt2 != 2) && (paramInt2 != 3))
-      throw new IllegalArgumentException("Invalid Scope:" + paramInt2);
-    if ((paramInt1 < 1) || (paramInt1 > 5))
+    if ((scope != 1) && (scope != 2) && (scope != 3))
+      throw new IllegalArgumentException("Invalid Scope:" + scope);
+    if ((index < 1) || (index > 5))
       throw new IllegalArgumentException("Index must be between 1 and 5 inclusive.");
-    if ((paramString1 == null) || (paramString1.length() == 0))
+    if ((name == null) || (name.length() == 0))
       throw new IllegalArgumentException("Invalid argument for name:  Cannot be empty");
-    if ((paramString2 == null) || (paramString2.length() == 0))
+    if ((value == null) || (value.length() == 0))
       throw new IllegalArgumentException("Invalid argument for value:  Cannot be empty");
     int i = 0;
-    i = AnalyticsParameterEncoder.encode(paramString1 + paramString2).length();
+    i = AnalyticsParameterEncoder.encode(name + value).length();
     if (i > 64)
       throw new IllegalArgumentException("Encoded form of name and value must not exceed 64 characters combined.  Character length: " + i);
-    this.index = paramInt1;
-    this.scope = paramInt2;
-    this.name = paramString1;
-    this.value = paramString2;
+    this.index = index;
+    this.scope = scope;
+    this.name = name;
+    this.value = value;
   }
 
-  public CustomVariable(int paramInt, String paramString1, String paramString2)
+  public CustomVariable(int index, String name, String value)
   {
-    this(paramInt, paramString1, paramString2, 3);
+    this(index, name, value, 3);
   }
 
   public int getScope()

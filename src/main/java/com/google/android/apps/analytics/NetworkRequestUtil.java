@@ -10,28 +10,28 @@ class NetworkRequestUtil
   private static final int X10_PROJECT_VALUES = 9;
   private static final int X10_PROJECT_SCOPES = 11;
 
-  public static String constructPageviewRequestPath(Event paramEvent, String paramString)
+  public static String constructPageviewRequestPath(Event event, String referrer)
   {
     String str1 = "";
-    if (paramEvent.action != null)
-      str1 = paramEvent.action;
+    if (event.action != null)
+      str1 = event.action;
     if (!str1.startsWith("/"))
       str1 = "/" + str1;
     str1 = encode(str1);
-    String str2 = getCustomVariableParams(paramEvent);
+    String str2 = getCustomVariableParams(event);
     Locale localLocale = Locale.getDefault();
     StringBuilder localStringBuilder = new StringBuilder();
     localStringBuilder.append("/__utm.gif");
     localStringBuilder.append("?utmwv=4.6ma");
-    localStringBuilder.append("&utmn=").append(paramEvent.randomVal);
+    localStringBuilder.append("&utmn=").append(event.randomVal);
     if (str2.length() > 0)
       localStringBuilder.append("&utme=").append(str2);
     localStringBuilder.append("&utmcs=UTF-8");
-    localStringBuilder.append(String.format("&utmsr=%dx%d", new Object[] { Integer.valueOf(paramEvent.screenWidth), Integer.valueOf(paramEvent.screenHeight) }));
+    localStringBuilder.append(String.format("&utmsr=%dx%d", new Object[] { Integer.valueOf(event.screenWidth), Integer.valueOf(event.screenHeight) }));
     localStringBuilder.append(String.format("&utmul=%s-%s", new Object[] { localLocale.getLanguage(), localLocale.getCountry() }));
     localStringBuilder.append("&utmp=").append(str1);
-    localStringBuilder.append("&utmac=").append(paramEvent.accountId);
-    localStringBuilder.append("&utmcc=").append(getEscapedCookieString(paramEvent, paramString));
+    localStringBuilder.append("&utmac=").append(event.accountId);
+    localStringBuilder.append("&utmcc=").append(getEscapedCookieString(event, referrer));
     return localStringBuilder.toString();
   }
 
@@ -173,7 +173,7 @@ class NetworkRequestUtil
     return paramString.replace("'", "'0").replace(")", "'1").replace("*", "'2").replace("!", "'3");
   }
 
-  public static String getEscapedCookieString(Event paramEvent, String paramString)
+  public static String getEscapedCookieString(Event paramEvent, String referrer)
   {
     StringBuilder localStringBuilder = new StringBuilder();
     localStringBuilder.append("__utma=");
@@ -183,13 +183,13 @@ class NetworkRequestUtil
     localStringBuilder.append(paramEvent.timestampPrevious).append(".");
     localStringBuilder.append(paramEvent.timestampCurrent).append(".");
     localStringBuilder.append(paramEvent.visits);
-    if (paramString != null)
+    if (referrer != null)
     {
       localStringBuilder.append("+__utmz=");
       localStringBuilder.append("999").append(".");
       localStringBuilder.append(paramEvent.timestampFirst).append(".");
       localStringBuilder.append("1.1.");
-      localStringBuilder.append(paramString);
+      localStringBuilder.append(referrer);
     }
     return encode(localStringBuilder.toString());
   }

@@ -2,13 +2,13 @@ package com.google.android.apps.analytics;
 
 abstract interface Dispatcher
 {
-  public abstract void dispatchEvents(Event[] paramArrayOfEvent);
+  public abstract void dispatchEvents(Event[] events);
 
-  public abstract void init(Callbacks paramCallbacks, String paramString);
+  public abstract void init(Callbacks callbacks, String paramString);
 
   public abstract void stop();
 
-  public abstract void setDryRun(boolean paramBoolean);
+  public abstract void setDryRun(boolean dryRun);
 
   public abstract boolean isDryRun();
 

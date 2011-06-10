@@ -5,21 +5,21 @@ import java.net.URLEncoder;
 
 public class AnalyticsParameterEncoder
 {
-  public static String encode(String paramString)
+  public static String encode(String string)
   {
-    return encode(paramString, "UTF-8");
+    return encode(string, "UTF-8");
   }
 
-  static String encode(String paramString1, String paramString2)
+  static String encode(String string, String characterEncoding)
   {
     try
     {
-      return URLEncoder.encode(paramString1, paramString2).replace("+", "%20");
+      return URLEncoder.encode(string, characterEncoding).replace("+", "%20");
     }
     catch (UnsupportedEncodingException localUnsupportedEncodingException)
     {
     }
-    throw new AssertionError("URL encoding failed for: " + paramString1);
+    throw new AssertionError("URL encoding failed for: " + string);
   }
 }
 

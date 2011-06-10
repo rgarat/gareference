@@ -9,14 +9,14 @@ public class Item
   private final double itemPrice;
   private final long itemCount;
 
-  private Item(Builder paramBuilder)
+  private Item(Builder builder)
   {
-    this.orderId = paramBuilder.orderId;
-    this.itemSKU = paramBuilder.itemSKU;
-    this.itemPrice = paramBuilder.itemPrice;
-    this.itemCount = paramBuilder.itemCount;
-    this.itemName = paramBuilder.itemName;
-    this.itemCategory = paramBuilder.itemCategory;
+    this.orderId = builder.orderId;
+    this.itemSKU = builder.itemSKU;
+    this.itemPrice = builder.itemPrice;
+    this.itemCount = builder.itemCount;
+    this.itemName = builder.itemName;
+    this.itemCategory = builder.itemCategory;
   }
 
   String getOrderId()
@@ -58,27 +58,27 @@ public class Item
     private String itemName = null;
     private String itemCategory = null;
 
-    public Builder(String paramString1, String paramString2, double paramDouble, long paramLong)
+    public Builder(String orderId, String itemSKU, double itemPrice, long itemCount)
     {
-      if ((paramString1 == null) || (paramString1.trim().length() == 0))
+      if ((orderId == null) || (orderId.trim().length() == 0))
         throw new IllegalArgumentException("orderId must not be empty or null");
-      if ((paramString2 == null) || (paramString2.trim().length() == 0))
+      if ((itemSKU == null) || (itemSKU.trim().length() == 0))
         throw new IllegalArgumentException("itemSKU must not be empty or null");
-      this.orderId = paramString1;
-      this.itemSKU = paramString2;
-      this.itemPrice = paramDouble;
-      this.itemCount = paramLong;
+      this.orderId = orderId;
+      this.itemSKU = itemSKU;
+      this.itemPrice = itemPrice;
+      this.itemCount = itemCount;
     }
 
-    public Builder setItemName(String paramString)
+    public Builder setItemName(String itemName)
     {
-      this.itemName = paramString;
+      this.itemName = itemName;
       return this;
     }
 
-    public Builder setItemCategory(String paramString)
+    public Builder setItemCategory(String itemCategory)
     {
-      this.itemCategory = paramString;
+      this.itemCategory = itemCategory;
       return this;
     }
 

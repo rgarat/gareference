@@ -24,27 +24,27 @@ class Event
   private Transaction transaction;
   private Item item;
 
-  Event(long paramLong, int paramInt1, String paramString1, int paramInt2, int paramInt3, int paramInt4, int paramInt5, int paramInt6, String paramString2, String paramString3, String paramString4, int paramInt7, int paramInt8, int paramInt9)
+  Event(long eventId, int userId, String accountId, int randomVal, int timestampFirst, int timestampPrevious, int timestampCurrent, int visits, String category, String action, String label, int value, int screenWidth, int screenHeight)
   {
-    this.eventId = paramLong;
-    this.userId = paramInt1;
-    this.accountId = paramString1;
-    this.randomVal = paramInt2;
-    this.timestampFirst = paramInt3;
-    this.timestampPrevious = paramInt4;
-    this.timestampCurrent = paramInt5;
-    this.visits = paramInt6;
-    this.category = paramString2;
-    this.action = paramString3;
-    this.label = paramString4;
-    this.value = paramInt7;
-    this.screenHeight = paramInt9;
-    this.screenWidth = paramInt8;
+    this.eventId = eventId;
+    this.userId = userId;
+    this.accountId = accountId;
+    this.randomVal = randomVal;
+    this.timestampFirst = timestampFirst;
+    this.timestampPrevious = timestampPrevious;
+    this.timestampCurrent = timestampCurrent;
+    this.visits = visits;
+    this.category = category;
+    this.action = action;
+    this.label = label;
+    this.value = value;
+    this.screenHeight = screenHeight;
+    this.screenWidth = screenWidth;
   }
 
-  Event(int paramInt1, String paramString1, String paramString2, String paramString3, String paramString4, int paramInt2, int paramInt3, int paramInt4)
+  Event(int userId, String accountId, String category, String action, String label, int value, int screenWidth, int screenHeight)
   {
-    this(-1L, paramInt1, paramString1, -1, -1, -1, -1, -1, paramString2, paramString3, paramString4, paramInt2, paramInt3, paramInt4);
+    this(-1L, userId, accountId, -1, -1, -1, -1, -1, category, action, label, value, screenWidth, screenHeight);
   }
 
   public String toString()
@@ -57,9 +57,9 @@ class Event
     return this.customVariableBuffer;
   }
 
-  public void setCustomVariableBuffer(CustomVariableBuffer paramCustomVariableBuffer)
+  public void setCustomVariableBuffer(CustomVariableBuffer customVariableBuffer)
   {
-    this.customVariableBuffer = paramCustomVariableBuffer;
+    this.customVariableBuffer = customVariableBuffer;
   }
 
   public Transaction getTransaction()
@@ -79,11 +79,11 @@ class Event
     return this.item;
   }
 
-  public void setItem(Item paramItem)
+  public void setItem(Item item)
   {
     if (!this.category.equals("__##GOOGLEITEM##__"))
       throw new IllegalStateException("Attempted to add an item to an event of type " + this.category);
-    this.item = paramItem;
+    this.item = item;
   }
 }
 

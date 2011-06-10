@@ -4,23 +4,23 @@ class CustomVariableBuffer
 {
   private CustomVariable[] customVariables = new CustomVariable[5];
 
-  public boolean isIndexAvailable(int paramInt)
+  public boolean isIndexAvailable(int index)
   {
-    throwOnInvalidIndex(paramInt);
-    return this.customVariables[(paramInt - 1)] == null;
+    throwOnInvalidIndex(index);
+    return this.customVariables[(index - 1)] == null;
   }
 
-  public void setCustomVariable(CustomVariable paramCustomVariable)
+  public void setCustomVariable(CustomVariable customVariable)
   {
-    int i = paramCustomVariable.getIndex();
+    int i = customVariable.getIndex();
     throwOnInvalidIndex(i);
-    this.customVariables[(paramCustomVariable.getIndex() - 1)] = paramCustomVariable;
+    this.customVariables[(customVariable.getIndex() - 1)] = customVariable;
   }
 
-  public CustomVariable getCustomVariableAt(int paramInt)
+  public CustomVariable getCustomVariableAt(int index)
   {
-    throwOnInvalidIndex(paramInt);
-    return this.customVariables[(paramInt - 1)];
+    throwOnInvalidIndex(index);
+    return this.customVariables[(index - 1)];
   }
 
   public CustomVariable[] getCustomVariableArray()
@@ -28,9 +28,9 @@ class CustomVariableBuffer
     return (CustomVariable[])this.customVariables.clone();
   }
 
-  private void throwOnInvalidIndex(int paramInt)
+  private void throwOnInvalidIndex(int index)
   {
-    if ((paramInt < 1) || (paramInt > 5))
+    if ((index < 1) || (index > 5))
       throw new IllegalArgumentException("Index must be between 1 and 5 inclusive.");
   }
 

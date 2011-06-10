@@ -2,7 +2,7 @@ package com.google.android.apps.analytics;
 
 abstract interface EventStore
 {
-  public abstract void putEvent(Event paramEvent);
+  public abstract void putEvent(Event event);
 
   public abstract Event[] peekEvents();
 
@@ -14,7 +14,7 @@ abstract interface EventStore
 
   public abstract int getStoreId();
 
-  public abstract void setReferrer(String paramString);
+  public abstract void setReferrer(String referrer);
 
   public abstract String getReferrer();
 
