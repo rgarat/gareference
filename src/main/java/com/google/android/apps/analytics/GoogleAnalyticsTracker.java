@@ -107,9 +107,9 @@ public class GoogleAnalyticsTracker
     this.userAgentVersion = userAgentVersion;
   }
 
-  public void trackEvent(String paramString1, String paramString2, String paramString3, int paramInt)
+  public void trackEvent(String category, String action, String label, int value)
   {
-    createEvent(this.accountId, paramString1, paramString2, paramString3, paramInt);
+    createEvent(this.accountId, category, action, label, value);
   }
 
   public void trackPageView(String page)
@@ -117,12 +117,12 @@ public class GoogleAnalyticsTracker
     createEvent(this.accountId, "__##GOOGLEPAGEVIEW##__", page, null, -1);
   }
 
-  private void createEvent(String paramString1, String paramString2, String paramString3, String paramString4, int paramInt)
+  private void createEvent(String accountId, String category, String action, String label, int value)
   {
-    Event localEvent = new Event(this.eventStore.getStoreId(), paramString1, paramString2, paramString3, paramString4, paramInt, this.parent.getResources().getDisplayMetrics().widthPixels, this.parent.getResources().getDisplayMetrics().heightPixels);
-    localEvent.setCustomVariableBuffer(this.customVariableBuffer);
+    Event event = new Event(this.eventStore.getStoreId(), accountId, category, action, label, value, this.parent.getResources().getDisplayMetrics().widthPixels, this.parent.getResources().getDisplayMetrics().heightPixels);
+    event.setCustomVariableBuffer(this.customVariableBuffer);
     this.customVariableBuffer = new CustomVariableBuffer();
-    this.eventStore.putEvent(localEvent);
+    this.eventStore.putEvent(event);
     resetPowerSaveMode();
   }
 
