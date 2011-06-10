@@ -12,160 +12,160 @@ class NetworkRequestUtil
 
   public static String constructPageviewRequestPath(Event event, String referrer)
   {
-    String str1 = "";
+    String page = "";
     if (event.action != null)
-      str1 = event.action;
-    if (!str1.startsWith("/"))
-      str1 = "/" + str1;
-    str1 = encode(str1);
-    String str2 = getCustomVariableParams(event);
+      page = event.action;
+    if (!page.startsWith("/"))
+      page = "/" + page;
+    page = encode(page);
+    String customVariables = getCustomVariableParams(event);
     Locale localLocale = Locale.getDefault();
-    StringBuilder localStringBuilder = new StringBuilder();
-    localStringBuilder.append("/__utm.gif");
-    localStringBuilder.append("?utmwv=4.6ma");
-    localStringBuilder.append("&utmn=").append(event.randomVal);
-    if (str2.length() > 0)
-      localStringBuilder.append("&utme=").append(str2);
-    localStringBuilder.append("&utmcs=UTF-8");
-    localStringBuilder.append(String.format("&utmsr=%dx%d", new Object[] { Integer.valueOf(event.screenWidth), Integer.valueOf(event.screenHeight) }));
-    localStringBuilder.append(String.format("&utmul=%s-%s", new Object[] { localLocale.getLanguage(), localLocale.getCountry() }));
-    localStringBuilder.append("&utmp=").append(str1);
-    localStringBuilder.append("&utmac=").append(event.accountId);
-    localStringBuilder.append("&utmcc=").append(getEscapedCookieString(event, referrer));
-    return localStringBuilder.toString();
+    StringBuilder builder = new StringBuilder();
+    builder.append(GOOGLE_ANALYTICS_GIF_PATH);
+    builder.append("?utmwv=4.6ma");
+    builder.append("&utmn=").append(event.randomVal);
+    if (customVariables.length() > 0)
+      builder.append("&utme=").append(customVariables);
+    builder.append("&utmcs=UTF-8");
+    builder.append(String.format("&utmsr=%dx%d", new Object[] { Integer.valueOf(event.screenWidth), Integer.valueOf(event.screenHeight) }));
+    builder.append(String.format("&utmul=%s-%s", new Object[] { localLocale.getLanguage(), localLocale.getCountry() }));
+    builder.append("&utmp=").append(page);
+    builder.append("&utmac=").append(event.accountId);
+    builder.append("&utmcc=").append(getEscapedCookieString(event, referrer));
+    return builder.toString();
   }
 
-  public static String constructEventRequestPath(Event paramEvent, String paramString)
+  public static String constructEventRequestPath(Event event, String paramString)
   {
     Locale localLocale = Locale.getDefault();
-    StringBuilder localStringBuilder1 = new StringBuilder();
-    StringBuilder localStringBuilder2 = new StringBuilder();
-    localStringBuilder2.append(String.format("5(%s*%s", new Object[] { encode(paramEvent.category), encode(paramEvent.action) }));
-    if (paramEvent.label != null)
-      localStringBuilder2.append("*").append(encode(paramEvent.label));
-    localStringBuilder2.append(")");
-    if (paramEvent.value > -1)
-      localStringBuilder2.append(String.format("(%d)", new Object[] { Integer.valueOf(paramEvent.value) }));
-    localStringBuilder2.append(getCustomVariableParams(paramEvent));
-    localStringBuilder1.append("/__utm.gif");
-    localStringBuilder1.append("?utmwv=4.6ma");
-    localStringBuilder1.append("&utmn=").append(paramEvent.randomVal);
-    localStringBuilder1.append("&utmt=event");
-    localStringBuilder1.append("&utme=").append(localStringBuilder2.toString());
-    localStringBuilder1.append("&utmcs=UTF-8");
-    localStringBuilder1.append(String.format("&utmsr=%dx%d", new Object[] { Integer.valueOf(paramEvent.screenWidth), Integer.valueOf(paramEvent.screenHeight) }));
-    localStringBuilder1.append(String.format("&utmul=%s-%s", new Object[] { localLocale.getLanguage(), localLocale.getCountry() }));
-    localStringBuilder1.append("&utmac=").append(paramEvent.accountId);
-    localStringBuilder1.append("&utmcc=").append(getEscapedCookieString(paramEvent, paramString));
-    return localStringBuilder1.toString();
+    StringBuilder builder = new StringBuilder();
+    StringBuilder eventParam = new StringBuilder();
+    eventParam.append(String.format("5(%s*%s", new Object[] { encode(event.category), encode(event.action) }));
+    if (event.label != null)
+      eventParam.append("*").append(encode(event.label));
+    eventParam.append(")");
+    if (event.value > -1)
+      eventParam.append(String.format("(%d)", new Object[] { Integer.valueOf(event.value) }));
+    eventParam.append(getCustomVariableParams(event));
+    builder.append(GOOGLE_ANALYTICS_GIF_PATH);
+    builder.append("?utmwv=4.6ma");
+    builder.append("&utmn=").append(event.randomVal);
+    builder.append("&utmt=event");
+    builder.append("&utme=").append(eventParam.toString());
+    builder.append("&utmcs=UTF-8");
+    builder.append(String.format("&utmsr=%dx%d", new Object[] { Integer.valueOf(event.screenWidth), Integer.valueOf(event.screenHeight) }));
+    builder.append(String.format("&utmul=%s-%s", new Object[] { localLocale.getLanguage(), localLocale.getCountry() }));
+    builder.append("&utmac=").append(event.accountId);
+    builder.append("&utmcc=").append(getEscapedCookieString(event, paramString));
+    return builder.toString();
   }
 
-  private static void appendStringValue(StringBuilder paramStringBuilder, String paramString1, String paramString2)
+  private static void appendStringValue(StringBuilder builder, String key, String value)
   {
-    paramStringBuilder.append(paramString1).append("=");
-    if ((paramString2 != null) && (paramString2.trim().length() > 0))
-      paramStringBuilder.append(AnalyticsParameterEncoder.encode(paramString2));
+    builder.append(key).append("=");
+    if ((value != null) && (value.trim().length() > 0))
+      builder.append(AnalyticsParameterEncoder.encode(value));
   }
 
-  static void appendCurrencyValue(StringBuilder paramStringBuilder, String paramString, double paramDouble)
+  static void appendCurrencyValue(StringBuilder builder, String key, double value)
   {
-    paramStringBuilder.append(paramString).append("=");
-    double d = Math.floor(paramDouble * 1000000.0D + 0.5D) / 1000000.0D;
+    builder.append(key).append("=");
+    double d = Math.floor(value * 1000000.0D + 0.5D) / 1000000.0D;
     if (d != 0.0D)
-      paramStringBuilder.append(Double.toString(d));
+      builder.append(Double.toString(d));
   }
 
-  public static String constructTransactionRequestPath(Event paramEvent, String paramString)
+  public static String constructTransactionRequestPath(Event event, String referrer)
   {
-    StringBuilder localStringBuilder = new StringBuilder();
-    localStringBuilder.append("/__utm.gif");
-    localStringBuilder.append("?utmwv=4.6ma");
-    localStringBuilder.append("&utmn=").append(paramEvent.randomVal);
-    localStringBuilder.append("&utmt=tran");
-    Transaction localTransaction = paramEvent.getTransaction();
-    if (localTransaction != null)
+    StringBuilder builder = new StringBuilder();
+    builder.append(GOOGLE_ANALYTICS_GIF_PATH);
+    builder.append("?utmwv=4.6ma");
+    builder.append("&utmn=").append(event.randomVal);
+    builder.append("&utmt=tran");
+    Transaction transaction = event.getTransaction();
+    if (transaction != null)
     {
-      appendStringValue(localStringBuilder, "&utmtid", localTransaction.getOrderId());
-      appendStringValue(localStringBuilder, "&utmtst", localTransaction.getStoreName());
-      appendCurrencyValue(localStringBuilder, "&utmtto", localTransaction.getTotalCost());
-      appendCurrencyValue(localStringBuilder, "&utmttx", localTransaction.getTotalTax());
-      appendCurrencyValue(localStringBuilder, "&utmtsp", localTransaction.getShippingCost());
-      appendStringValue(localStringBuilder, "&utmtci", "");
-      appendStringValue(localStringBuilder, "&utmtrg", "");
-      appendStringValue(localStringBuilder, "&utmtco", "");
+      appendStringValue(builder, "&utmtid", transaction.getOrderId());
+      appendStringValue(builder, "&utmtst", transaction.getStoreName());
+      appendCurrencyValue(builder, "&utmtto", transaction.getTotalCost());
+      appendCurrencyValue(builder, "&utmttx", transaction.getTotalTax());
+      appendCurrencyValue(builder, "&utmtsp", transaction.getShippingCost());
+      appendStringValue(builder, "&utmtci", "");
+      appendStringValue(builder, "&utmtrg", "");
+      appendStringValue(builder, "&utmtco", "");
     }
-    localStringBuilder.append("&utmac=").append(paramEvent.accountId);
-    localStringBuilder.append("&utmcc=").append(getEscapedCookieString(paramEvent, paramString));
-    return localStringBuilder.toString();
+    builder.append("&utmac=").append(event.accountId);
+    builder.append("&utmcc=").append(getEscapedCookieString(event, referrer));
+    return builder.toString();
   }
 
-  public static String constructItemRequestPath(Event paramEvent, String paramString)
+  public static String constructItemRequestPath(Event event, String referrer)
   {
-    StringBuilder localStringBuilder = new StringBuilder();
-    localStringBuilder.append("/__utm.gif");
-    localStringBuilder.append("?utmwv=4.6ma");
-    localStringBuilder.append("&utmn=").append(paramEvent.randomVal);
-    localStringBuilder.append("&utmt=item");
-    Item localItem = paramEvent.getItem();
-    if (localItem != null)
+    StringBuilder builder = new StringBuilder();
+    builder.append(GOOGLE_ANALYTICS_GIF_PATH);
+    builder.append("?utmwv=4.6ma");
+    builder.append("&utmn=").append(event.randomVal);
+    builder.append("&utmt=item");
+    Item item = event.getItem();
+    if (item != null)
     {
-      appendStringValue(localStringBuilder, "&utmtid", localItem.getOrderId());
-      appendStringValue(localStringBuilder, "&utmipc", localItem.getItemSKU());
-      appendStringValue(localStringBuilder, "&utmipn", localItem.getItemName());
-      appendStringValue(localStringBuilder, "&utmiva", localItem.getItemCategory());
-      appendCurrencyValue(localStringBuilder, "&utmipr", localItem.getItemPrice());
-      localStringBuilder.append("&utmiqt=");
-      if (localItem.getItemCount() != 0L)
-        localStringBuilder.append(localItem.getItemCount());
+      appendStringValue(builder, "&utmtid", item.getOrderId());
+      appendStringValue(builder, "&utmipc", item.getItemSKU());
+      appendStringValue(builder, "&utmipn", item.getItemName());
+      appendStringValue(builder, "&utmiva", item.getItemCategory());
+      appendCurrencyValue(builder, "&utmipr", item.getItemPrice());
+      builder.append("&utmiqt=");
+      if (item.getItemCount() != 0L)
+        builder.append(item.getItemCount());
     }
-    localStringBuilder.append("&utmac=").append(paramEvent.accountId);
-    localStringBuilder.append("&utmcc=").append(getEscapedCookieString(paramEvent, paramString));
-    return localStringBuilder.toString();
+    builder.append("&utmac=").append(event.accountId);
+    builder.append("&utmcc=").append(getEscapedCookieString(event, referrer));
+    return builder.toString();
   }
 
-  public static String getCustomVariableParams(Event paramEvent)
+  public static String getCustomVariableParams(Event event)
   {
-    StringBuilder localStringBuilder = new StringBuilder();
-    CustomVariableBuffer localCustomVariableBuffer = paramEvent.getCustomVariableBuffer();
-    if (localCustomVariableBuffer == null)
+    StringBuilder builder = new StringBuilder();
+    CustomVariableBuffer customVariableBuffer = event.getCustomVariableBuffer();
+    if (customVariableBuffer == null)
       return "";
-    if (!localCustomVariableBuffer.hasCustomVariables())
+    if (!customVariableBuffer.hasCustomVariables())
       return "";
-    CustomVariable[] arrayOfCustomVariable = localCustomVariableBuffer.getCustomVariableArray();
-    createX10Project(arrayOfCustomVariable, localStringBuilder, 8);
-    createX10Project(arrayOfCustomVariable, localStringBuilder, 9);
-    createX10Project(arrayOfCustomVariable, localStringBuilder, 11);
-    return localStringBuilder.toString();
+    CustomVariable[] customVariables = customVariableBuffer.getCustomVariableArray();
+    createX10Project(customVariables, builder, X10_PROJECT_NAMES);
+    createX10Project(customVariables, builder, X10_PROJECT_VALUES);
+    createX10Project(customVariables, builder, X10_PROJECT_SCOPES);
+    return builder.toString();
   }
 
-  private static void createX10Project(CustomVariable[] paramArrayOfCustomVariable, StringBuilder paramStringBuilder, int paramInt)
+  private static void createX10Project(CustomVariable[] customVariables, StringBuilder builder, int X10id)
   {
     int i = 1;
-    paramStringBuilder.append(paramInt).append("(");
-    for (int j = 0; j < paramArrayOfCustomVariable.length; j++)
+    builder.append(X10id).append("(");
+    for (int j = 0; j < customVariables.length; j++)
     {
-      if (paramArrayOfCustomVariable[j] == null)
+      if (customVariables[j] == null)
         continue;
-      CustomVariable localCustomVariable = paramArrayOfCustomVariable[j];
+      CustomVariable localCustomVariable = customVariables[j];
       if (i == 0)
-        paramStringBuilder.append("*");
+        builder.append("*");
       else
         i = 0;
-      paramStringBuilder.append(localCustomVariable.getIndex()).append("!");
-      switch (paramInt)
+      builder.append(localCustomVariable.getIndex()).append("!");
+      switch (X10id)
       {
-      case 8:
-        paramStringBuilder.append(x10Escape(encode(localCustomVariable.getName())));
+      case X10_PROJECT_NAMES:
+        builder.append(x10Escape(encode(localCustomVariable.getName())));
         break;
-      case 9:
-        paramStringBuilder.append(x10Escape(encode(localCustomVariable.getValue())));
+      case X10_PROJECT_VALUES:
+        builder.append(x10Escape(encode(localCustomVariable.getValue())));
         break;
-      case 11:
-        paramStringBuilder.append(localCustomVariable.getScope());
+      case X10_PROJECT_SCOPES:
+        builder.append(localCustomVariable.getScope());
       case 10:
       }
     }
-    paramStringBuilder.append(")");
+    builder.append(")");
   }
 
   private static String x10Escape(String paramString)
@@ -173,25 +173,25 @@ class NetworkRequestUtil
     return paramString.replace("'", "'0").replace(")", "'1").replace("*", "'2").replace("!", "'3");
   }
 
-  public static String getEscapedCookieString(Event paramEvent, String referrer)
+  public static String getEscapedCookieString(Event event, String referrer)
   {
-    StringBuilder localStringBuilder = new StringBuilder();
-    localStringBuilder.append("__utma=");
-    localStringBuilder.append("999").append(".");
-    localStringBuilder.append(paramEvent.userId).append(".");
-    localStringBuilder.append(paramEvent.timestampFirst).append(".");
-    localStringBuilder.append(paramEvent.timestampPrevious).append(".");
-    localStringBuilder.append(paramEvent.timestampCurrent).append(".");
-    localStringBuilder.append(paramEvent.visits);
+    StringBuilder builder = new StringBuilder();
+    builder.append("__utma=");
+    builder.append(FAKE_DOMAIN_HASH).append(".");
+    builder.append(event.userId).append(".");
+    builder.append(event.timestampFirst).append(".");
+    builder.append(event.timestampPrevious).append(".");
+    builder.append(event.timestampCurrent).append(".");
+    builder.append(event.visits);
     if (referrer != null)
     {
-      localStringBuilder.append("+__utmz=");
-      localStringBuilder.append("999").append(".");
-      localStringBuilder.append(paramEvent.timestampFirst).append(".");
-      localStringBuilder.append("1.1.");
-      localStringBuilder.append(referrer);
+      builder.append("+__utmz=");
+      builder.append(FAKE_DOMAIN_HASH).append(".");
+      builder.append(event.timestampFirst).append(".");
+      builder.append("1.1.");
+      builder.append(referrer);
     }
-    return encode(localStringBuilder.toString());
+    return encode(builder.toString());
   }
 
   private static String encode(String paramString)
