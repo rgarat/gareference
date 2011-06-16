@@ -50,29 +50,29 @@ public class Transaction
     private double totalTax = 0.0D;
     private double shippingCost = 0.0D;
 
-    public Builder(String paramString, double paramDouble)
+    public Builder(String orderId, double totalCost)
     {
-      if ((paramString == null) || (paramString.trim().length() == 0))
+      if ((orderId == null) || (orderId.trim().length() == 0))
         throw new IllegalArgumentException("orderId must not be empty or null");
-      this.orderId = paramString;
-      this.totalCost = paramDouble;
+      this.orderId = orderId;
+      this.totalCost = totalCost;
     }
 
-    public Builder setStoreName(String paramString)
+    public Builder setStoreName(String storeName)
     {
-      this.storeName = paramString;
+      this.storeName = storeName;
       return this;
     }
 
-    public Builder setTotalTax(double paramDouble)
+    public Builder setTotalTax(double totalTax)
     {
-      this.totalTax = paramDouble;
+      this.totalTax = totalTax;
       return this;
     }
 
-    public Builder setShippingCost(double paramDouble)
+    public Builder setShippingCost(double shippingCost)
     {
-      this.shippingCost = paramDouble;
+      this.shippingCost = shippingCost;
       return this;
     }
 

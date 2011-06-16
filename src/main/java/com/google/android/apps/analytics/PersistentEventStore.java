@@ -71,36 +71,36 @@ class PersistentEventStore
   private static final String CREATE_TRANSACTION_EVENTS_TABLE = "CREATE TABLE transaction_events (" + String.format(" '%s' INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,", new Object[] { "tran_id" }) + String.format(" '%s' INTEGER NOT NULL,", new Object[] { "event_id" }) + String.format(" '%s' TEXT NOT NULL,", new Object[] { "order_id" }) + String.format(" '%s' TEXT,", new Object[] { "tran_storename" }) + String.format(" '%s' TEXT NOT NULL,", new Object[] { "tran_totalcost" }) + String.format(" '%s' TEXT,", new Object[] { "tran_totaltax" }) + String.format(" '%s' TEXT);", new Object[] { "tran_shippingcost" });
   private static final String CREATE_ITEM_EVENTS_TABLE = "CREATE TABLE item_events (" + String.format(" '%s' INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,", new Object[] { "item_id" }) + String.format(" '%s' INTEGER NOT NULL,", new Object[] { "event_id" }) + String.format(" '%s' TEXT NOT NULL,", new Object[] { "order_id" }) + String.format(" '%s' TEXT NOT NULL,", new Object[] { "item_sku" }) + String.format(" '%s' TEXT,", new Object[] { "item_name" }) + String.format(" '%s' TEXT,", new Object[] { "item_category" }) + String.format(" '%s' TEXT NOT NULL,", new Object[] { "item_price" }) + String.format(" '%s' TEXT NOT NULL);", new Object[] { "item_count" });
 
-  PersistentEventStore(DataBaseHelper paramDataBaseHelper)
+  PersistentEventStore(DataBaseHelper databaseHelper)
   {
-    this.databaseHelper = paramDataBaseHelper;
+    this.databaseHelper = databaseHelper;
     try
     {
-      paramDataBaseHelper.getWritableDatabase().close();
+      databaseHelper.getWritableDatabase().close();
     }
-    catch (SQLiteException localSQLiteException)
+    catch (SQLiteException exception)
     {
-      Log.e("GoogleAnalyticsTracker", localSQLiteException.toString());
+      Log.e("GoogleAnalyticsTracker", exception.toString());
     }
   }
 
-  public void deleteEvent(long paramLong)
+  public void deleteEvent(long eventId)
   {
-    String str = "event_id=" + paramLong;
+    String str = "event_id=" + eventId;
     try
     {
-      SQLiteDatabase localSQLiteDatabase = this.databaseHelper.getWritableDatabase();
-      if (localSQLiteDatabase.delete("events", str, null) != 0)
+      SQLiteDatabase database = this.databaseHelper.getWritableDatabase();
+      if (database.delete("events", str, null) != 0)
       {
         this.numStoredEvents -= 1;
-        localSQLiteDatabase.delete("custom_variables", str, null);
-        localSQLiteDatabase.delete("transaction_events", str, null);
-        localSQLiteDatabase.delete("item_events", str, null);
+        database.delete("custom_variables", str, null);
+        database.delete("transaction_events", str, null);
+        database.delete("item_events", str, null);
       }
     }
-    catch (SQLiteException localSQLiteException)
+    catch (SQLiteException exception)
     {
-      Log.e("GoogleAnalyticsTracker", localSQLiteException.toString());
+      Log.e("GoogleAnalyticsTracker", exception.toString());
     }
   }
 
@@ -109,166 +109,179 @@ class PersistentEventStore
     return peekEvents(1000);
   }
 
-  public Event[] peekEvents(int paramInt)
+  public Event[] peekEvents(int cantEvents)
   {
-    ArrayList localArrayList = new ArrayList();
-    Cursor localCursor = null;
+    ArrayList<Event> events = new ArrayList<Event>();
+    Cursor cursor = null;
     try
     {
-      SQLiteDatabase localSQLiteDatabase = this.databaseHelper.getReadableDatabase();
-      localCursor = localSQLiteDatabase.query("events", null, null, null, null, null, "event_id", Integer.toString(paramInt));
-      while (localCursor.moveToNext())
+      SQLiteDatabase database = this.databaseHelper.getReadableDatabase();
+      cursor = database.query("events", null, null, null, null, null, "event_id", Integer.toString(cantEvents));
+      while (cursor.moveToNext())
       {
-        Event localObject1 = new Event(localCursor.getLong(0), localCursor.getInt(1), localCursor.getString(2), localCursor.getInt(3), localCursor.getInt(4), localCursor.getInt(5), localCursor.getInt(6), localCursor.getInt(7), localCursor.getString(8), localCursor.getString(9), localCursor.getString(10), localCursor.getInt(11), localCursor.getInt(12), localCursor.getInt(13));
-        long l = localCursor.getLong(localCursor.getColumnIndex("event_id"));
-        if ("__##GOOGLETRANSACTION##__".equals(((Event)localObject1).category))
+        Event event = new Event(cursor.getLong(0), cursor.getInt(1), cursor.getString(2), cursor.getInt(3), cursor.getInt(4), cursor.getInt(5), cursor.getInt(6), cursor.getInt(7), cursor.getString(8), cursor.getString(9), cursor.getString(10), cursor.getInt(11), cursor.getInt(12), cursor.getInt(13));
+        long eventId = cursor.getLong(cursor.getColumnIndex("event_id"));
+        if ("__##GOOGLETRANSACTION##__".equals(event.category))
         {
-          Transaction localObject2 = getTransaction(l);
-          if (localObject2 == null)
-            Log.w("GoogleAnalyticsTracker", "missing expected transaction for event " + l);
-          ((Event)localObject1).setTransaction((Transaction)localObject2);
+          Transaction transaction = getTransaction(eventId);
+          if (transaction == null)
+            Log.w("GoogleAnalyticsTracker", "missing expected transaction for event " + eventId);
+          event.setTransaction(transaction);
         }
-        else if ("__##GOOGLEITEM##__".equals(((Event)localObject1).category))
+        else if ("__##GOOGLEITEM##__".equals(event.category))
         {
-          Item localObject2 = getItem(l);
-          if (localObject2 == null)
-            Log.w("GoogleAnalyticsTracker", "missing expected item for event " + l);
-          ((Event)localObject1).setItem((Item)localObject2);
+          Item item = getItem(eventId);
+          if (item == null)
+            Log.w("GoogleAnalyticsTracker", "missing expected item for event " + eventId);
+          event.setItem(item);
         }
         else
         {
-          CustomVariableBuffer localObject2 = getCustomVariables(l);
-          ((Event)localObject1).setCustomVariableBuffer((CustomVariableBuffer)localObject2);
+          CustomVariableBuffer customVariableBuffer = getCustomVariables(eventId);
+          event.setCustomVariableBuffer(customVariableBuffer);
         }
-        localArrayList.add(localObject1);
+        events.add(event);
       }
     }
-    catch (SQLiteException localSQLiteException)
+    catch (SQLiteException exception)
     {
-      Log.e("GoogleAnalyticsTracker", localSQLiteException.toString());
-      Event[] localObject1 = new Event[0];
+      Log.e("GoogleAnalyticsTracker", exception.toString());
+      Event[] emptyEvents = new Event[0];
       
-      return localObject1;
+      return emptyEvents;
     }
     finally
     {
-      if (localCursor != null)
-        localCursor.close();
+      if (cursor != null)
+        cursor.close();
     }
-    return (Event[])localArrayList.toArray(new Event[localArrayList.size()]);
+    return events.toArray(new Event[events.size()]);
   }
 
-  Transaction getTransaction(long paramLong)
+  Transaction getTransaction(long eventId)
   {
-    Cursor localCursor = null;
+    Cursor cursor = null;
     try
     {
-      SQLiteDatabase localSQLiteDatabase = this.databaseHelper.getReadableDatabase();
-      localCursor = localSQLiteDatabase.query("transaction_events", null, "event_id=" + paramLong, null, null, null, null);
-      if (localCursor.moveToFirst())
+      SQLiteDatabase database = this.databaseHelper.getReadableDatabase();
+      cursor = database.query("transaction_events", null, "event_id=" + eventId, null, null, null, null);
+      if (cursor.moveToFirst())
       {
-        Transaction localTransaction = new Transaction.Builder(localCursor.getString(localCursor.getColumnIndex("order_id")), localCursor.getDouble(localCursor.getColumnIndex("tran_totalcost"))).setStoreName(localCursor.getString(localCursor.getColumnIndex("tran_storename"))).setTotalTax(localCursor.getDouble(localCursor.getColumnIndex("tran_totaltax"))).setShippingCost(localCursor.getDouble(localCursor.getColumnIndex("tran_shippingcost"))).build();
-        return localTransaction;
+        String orderId = cursor.getString(cursor.getColumnIndex("order_id"));
+		double totalCost = cursor.getDouble(cursor.getColumnIndex("tran_totalcost"));
+		String storeName = cursor.getString(cursor.getColumnIndex("tran_storename"));
+		double totalTax = cursor.getDouble(cursor.getColumnIndex("tran_totaltax"));
+		double shippingCost = cursor.getDouble(cursor.getColumnIndex("tran_shippingcost"));
+		Transaction transaction = new Transaction.Builder(orderId, totalCost).setStoreName(storeName).setTotalTax(totalTax).setShippingCost(shippingCost).build();
+        return transaction;
       }
     }
-    catch (SQLiteException localSQLiteException)
+    catch (SQLiteException exception)
     {
-      Log.e("GoogleAnalyticsTracker", localSQLiteException.toString());
+      Log.e("GoogleAnalyticsTracker", exception.toString());
     }
     finally
     {
-      if (localCursor != null)
-        localCursor.close();
+      if (cursor != null)
+        cursor.close();
     }
     return null;
   }
 
-  Item getItem(long paramLong)
+  Item getItem(long eventId)
   {
-    Cursor localCursor = null;
+    Cursor cursor = null;
     try
     {
-      SQLiteDatabase localSQLiteDatabase = this.databaseHelper.getReadableDatabase();
-      localCursor = localSQLiteDatabase.query("item_events", null, "event_id=" + paramLong, null, null, null, null);
-      if (localCursor.moveToFirst())
+      SQLiteDatabase database = this.databaseHelper.getReadableDatabase();
+      cursor = database.query("item_events", null, "event_id=" + eventId, null, null, null, null);
+      if (cursor.moveToFirst())
       {
-        Item localItem = new Item.Builder(localCursor.getString(localCursor.getColumnIndex("order_id")), localCursor.getString(localCursor.getColumnIndex("item_sku")), localCursor.getDouble(localCursor.getColumnIndex("item_price")), localCursor.getLong(localCursor.getColumnIndex("item_count"))).setItemName(localCursor.getString(localCursor.getColumnIndex("item_name"))).setItemCategory(localCursor.getString(localCursor.getColumnIndex("item_category"))).build();
-        return localItem;
+        String orderId = cursor.getString(cursor.getColumnIndex("order_id"));
+		String itemSKU = cursor.getString(cursor.getColumnIndex("item_sku"));
+		double itemPrice = cursor.getDouble(cursor.getColumnIndex("item_price"));
+		long itemCount = cursor.getLong(cursor.getColumnIndex("item_count"));
+		String itemName = cursor.getString(cursor.getColumnIndex("item_name"));
+		String itemCategory = cursor.getString(cursor.getColumnIndex("item_category"));
+		Item item = new Item.Builder(orderId, itemSKU, itemPrice, itemCount).setItemName(itemName).setItemCategory(itemCategory).build();
+        return item;
       }
     }
-    catch (SQLiteException localSQLiteException)
+    catch (SQLiteException exception)
     {
-      Log.e("GoogleAnalyticsTracker", localSQLiteException.toString());
+      Log.e("GoogleAnalyticsTracker", exception.toString());
     }
     finally
     {
-      if (localCursor != null)
-        localCursor.close();
+      if (cursor != null)
+        cursor.close();
     }
     return null;
   }
 
-  CustomVariableBuffer getCustomVariables(long paramLong)
+  CustomVariableBuffer getCustomVariables(long eventId)
   {
-    Cursor localCursor = null;
-    CustomVariableBuffer localCustomVariableBuffer = new CustomVariableBuffer();
+    Cursor cursor = null;
+    CustomVariableBuffer customVariableBuffer = new CustomVariableBuffer();
     try
     {
-      SQLiteDatabase localSQLiteDatabase = this.databaseHelper.getReadableDatabase();
-      localCursor = localSQLiteDatabase.query("custom_variables", null, "event_id=" + paramLong, null, null, null, null);
-      while (localCursor.moveToNext())
+      SQLiteDatabase database = this.databaseHelper.getReadableDatabase();
+      cursor = database.query("custom_variables", null, "event_id=" + eventId, null, null, null, null);
+      while (cursor.moveToNext())
       {
-        CustomVariable localCustomVariable = new CustomVariable(localCursor.getInt(localCursor.getColumnIndex("cv_index")), localCursor.getString(localCursor.getColumnIndex("cv_name")), localCursor.getString(localCursor.getColumnIndex("cv_value")), localCursor.getInt(localCursor.getColumnIndex("cv_scope")));
-        localCustomVariableBuffer.setCustomVariable(localCustomVariable);
+        int index = cursor.getInt(cursor.getColumnIndex("cv_index"));
+		String name = cursor.getString(cursor.getColumnIndex("cv_name"));
+		String value = cursor.getString(cursor.getColumnIndex("cv_value"));
+		int scope = cursor.getInt(cursor.getColumnIndex("cv_scope"));
+		CustomVariable customVariable = new CustomVariable(index, name, value, scope);
+        customVariableBuffer.setCustomVariable(customVariable);
       }
     }
-    catch (SQLiteException localSQLiteException)
+    catch (SQLiteException exception)
     {
-      Log.e("GoogleAnalyticsTracker", localSQLiteException.toString());
+      Log.e("GoogleAnalyticsTracker", exception.toString());
     }
     finally
     {
-      if (localCursor != null)
-        localCursor.close();
+      if (cursor != null)
+        cursor.close();
     }
-    return localCustomVariableBuffer;
+    return customVariableBuffer;
   }
 
-  public String getVisitorCustomVar(int paramInt)
+  public String getVisitorCustomVar(int index)
   {
-    Cursor localCursor = null;
+    Cursor cursor = null;
     try
     {
-      SQLiteDatabase localSQLiteDatabase = this.databaseHelper.getReadableDatabase();
-      localCursor = localSQLiteDatabase.query("custom_var_cache", null, "cv_scope = 1 AND cv_index = " + paramInt, null, null, null, null);
-      String str1 = null;
-      if (localCursor.getCount() > 0)
+      SQLiteDatabase database = this.databaseHelper.getReadableDatabase();
+      cursor = database.query("custom_var_cache", null, "cv_scope = 1 AND cv_index = " + index, null, null, null, null);
+      String value = null;
+      if (cursor.getCount() > 0)
       {
-        localCursor.moveToFirst();
-        str1 = localCursor.getString(localCursor.getColumnIndex("cv_value"));
+        cursor.moveToFirst();
+        value = cursor.getString(cursor.getColumnIndex("cv_value"));
       }
       else
       {
-        str1 = null;
+        value = null;
       }
-      localSQLiteDatabase.close();
-      String str2 = str1;
-      return str2;
+      database.close();
+      return value;
     }
-    catch (SQLiteException localSQLiteException)
+    catch (SQLiteException exception)
     {
-      Log.e("GoogleAnalyticsTracker", localSQLiteException.toString());
-      String str1 = null;
-      return str1;
+      Log.e("GoogleAnalyticsTracker", exception.toString());
+      return null;
     }
     finally
     {
-      if (localCursor != null)
-        localCursor.close();
+      if (cursor != null)
+        cursor.close();
     }
   }
 
-  public void putEvent(Event paramEvent)
+  public void putEvent(Event event)
   {
     if (this.numStoredEvents >= 1000)
     {
@@ -277,176 +290,180 @@ class PersistentEventStore
     }
     if (!this.sessionUpdated)
       storeUpdatedSession();
-    SQLiteDatabase localSQLiteDatabase = null;
+    SQLiteDatabase database = null;
     try
     {
-      localSQLiteDatabase = this.databaseHelper.getWritableDatabase();
-      localSQLiteDatabase.beginTransaction();
-      ContentValues localContentValues = new ContentValues();
-      localContentValues.put("user_id", Integer.valueOf(paramEvent.userId));
-      localContentValues.put("account_id", paramEvent.accountId);
-      localContentValues.put("random_val", Integer.valueOf((int)(Math.random() * 2147483647.0D)));
-      localContentValues.put("timestamp_first", Long.valueOf(this.timestampFirst));
-      localContentValues.put("timestamp_previous", Long.valueOf(this.timestampPrevious));
-      localContentValues.put("timestamp_current", Long.valueOf(this.timestampCurrent));
-      localContentValues.put("visits", Integer.valueOf(this.visits));
-      localContentValues.put("category", paramEvent.category);
-      localContentValues.put("action", paramEvent.action);
-      localContentValues.put("label", paramEvent.label);
-      localContentValues.put("value", Integer.valueOf(paramEvent.value));
-      localContentValues.put("screen_width", Integer.valueOf(paramEvent.screenWidth));
-      localContentValues.put("screen_height", Integer.valueOf(paramEvent.screenHeight));
-      long l1 = localSQLiteDatabase.insert("events", "event_id", localContentValues);
-      if (l1 != -1L)
+      database = this.databaseHelper.getWritableDatabase();
+      database.beginTransaction();
+      ContentValues contentValues = new ContentValues();
+      contentValues.put("user_id", Integer.valueOf(event.userId));
+      contentValues.put("account_id", event.accountId);
+      contentValues.put("random_val", Integer.valueOf((int)(Math.random() * 2147483647.0D)));
+      contentValues.put("timestamp_first", Long.valueOf(this.timestampFirst));
+      contentValues.put("timestamp_previous", Long.valueOf(this.timestampPrevious));
+      contentValues.put("timestamp_current", Long.valueOf(this.timestampCurrent));
+      contentValues.put("visits", Integer.valueOf(this.visits));
+      contentValues.put("category", event.category);
+      contentValues.put("action", event.action);
+      contentValues.put("label", event.label);
+      contentValues.put("value", Integer.valueOf(event.value));
+      contentValues.put("screen_width", Integer.valueOf(event.screenWidth));
+      contentValues.put("screen_height", Integer.valueOf(event.screenHeight));
+      long rowId = database.insert("events", "event_id", contentValues);
+      if (rowId != -1L)
       {
         this.numStoredEvents += 1;
-        Cursor localCursor = localSQLiteDatabase.query("events", new String[] { "event_id" }, null, null, null, null, "event_id DESC", null);
-        localCursor.moveToPosition(0);
-        long l2 = localCursor.getLong(0);
-        localCursor.close();
-        if (paramEvent.category.equals("__##GOOGLETRANSACTION##__"))
-          putTransaction(paramEvent, l2);
-        else if (paramEvent.category.equals("__##GOOGLEITEM##__"))
-          putItem(paramEvent, l2);
+        Cursor cursor = database.query("events", new String[] { "event_id" }, null, null, null, null, "event_id DESC", null);
+        cursor.moveToPosition(0);
+        long eventId = cursor.getLong(0);
+        cursor.close();
+        if (event.category.equals("__##GOOGLETRANSACTION##__"))
+          putTransaction(event, eventId);
+        else if (event.category.equals("__##GOOGLEITEM##__"))
+          putItem(event, eventId);
         else
-          putCustomVariables(paramEvent, l2);
-        localSQLiteDatabase.setTransactionSuccessful();
+          putCustomVariables(event, eventId);
+        database.setTransactionSuccessful();
       }
       else
       {
         Log.e("GoogleAnalyticsTracker", "Error when attempting to add event to database.");
       }
     }
-    catch (SQLiteException localSQLiteException)
+    catch (SQLiteException exception)
     {
-      Log.e("GoogleAnalyticsTracker", localSQLiteException.toString());
+      Log.e("GoogleAnalyticsTracker", exception.toString());
     }
     finally
     {
-      if (localSQLiteDatabase != null)
-        localSQLiteDatabase.endTransaction();
+      if (database != null)
+        database.endTransaction();
     }
   }
 
-  void putTransaction(Event paramEvent, long paramLong)
+  void putTransaction(Event event, long eventId)
   {
-    Transaction localTransaction = paramEvent.getTransaction();
-    if (localTransaction == null)
+    Transaction transaction = event.getTransaction();
+    if (transaction == null)
     {
-      Log.w("GoogleAnalyticsTracker", "missing transaction details for event " + paramLong);
+      Log.w("GoogleAnalyticsTracker", "missing transaction details for event " + eventId);
       return;
     }
     try
     {
-      SQLiteDatabase localSQLiteDatabase = this.databaseHelper.getWritableDatabase();
-      ContentValues localContentValues = new ContentValues();
-      localContentValues.put("event_id", Long.valueOf(paramLong));
-      localContentValues.put("order_id", localTransaction.getOrderId());
-      localContentValues.put("tran_storename", localTransaction.getStoreName());
-      localContentValues.put("tran_totalcost", localTransaction.getTotalCost() + "");
-      localContentValues.put("tran_totaltax", localTransaction.getTotalTax() + "");
-      localContentValues.put("tran_shippingcost", localTransaction.getShippingCost() + "");
-      localSQLiteDatabase.insert("transaction_events", "event_id", localContentValues);
+      SQLiteDatabase database = this.databaseHelper.getWritableDatabase();
+      ContentValues contentValues = new ContentValues();
+      contentValues.put("event_id", Long.valueOf(eventId));
+      contentValues.put("order_id", transaction.getOrderId());
+      contentValues.put("tran_storename", transaction.getStoreName());
+      contentValues.put("tran_totalcost", transaction.getTotalCost() + "");
+      contentValues.put("tran_totaltax", transaction.getTotalTax() + "");
+      contentValues.put("tran_shippingcost", transaction.getShippingCost() + "");
+      database.insert("transaction_events", "event_id", contentValues);
     }
-    catch (SQLiteException localSQLiteException)
+    catch (SQLiteException exception)
     {
-      Log.e("GoogleAnalyticsTracker", localSQLiteException.toString());
+      Log.e("GoogleAnalyticsTracker", exception.toString());
     }
   }
 
-  void putItem(Event paramEvent, long paramLong)
+  void putItem(Event event, long eventId)
   {
-    Item localItem = paramEvent.getItem();
-    if (localItem == null)
+    Item item = event.getItem();
+    if (item == null)
     {
-      Log.w("GoogleAnalyticsTracker", "missing item details for event " + paramLong);
+      Log.w("GoogleAnalyticsTracker", "missing item details for event " + eventId);
       return;
     }
     try
     {
-      SQLiteDatabase localSQLiteDatabase = this.databaseHelper.getWritableDatabase();
-      ContentValues localContentValues = new ContentValues();
-      localContentValues.put("event_id", Long.valueOf(paramLong));
-      localContentValues.put("order_id", localItem.getOrderId());
-      localContentValues.put("item_sku", localItem.getItemSKU());
-      localContentValues.put("item_name", localItem.getItemName());
-      localContentValues.put("item_category", localItem.getItemCategory());
-      localContentValues.put("item_price", localItem.getItemPrice() + "");
-      localContentValues.put("item_count", localItem.getItemCount() + "");
-      localSQLiteDatabase.insert("item_events", "event_id", localContentValues);
+      SQLiteDatabase database = this.databaseHelper.getWritableDatabase();
+      ContentValues contentValues = new ContentValues();
+      contentValues.put("event_id", Long.valueOf(eventId));
+      contentValues.put("order_id", item.getOrderId());
+      contentValues.put("item_sku", item.getItemSKU());
+      contentValues.put("item_name", item.getItemName());
+      contentValues.put("item_category", item.getItemCategory());
+      contentValues.put("item_price", item.getItemPrice() + "");
+      contentValues.put("item_count", item.getItemCount() + "");
+      database.insert("item_events", "event_id", contentValues);
     }
-    catch (SQLiteException localSQLiteException)
+    catch (SQLiteException exception)
     {
-      Log.e("GoogleAnalyticsTracker", localSQLiteException.toString());
+      Log.e("GoogleAnalyticsTracker", exception.toString());
     }
   }
 
-  void putCustomVariables(Event paramEvent, long paramLong)
+  void putCustomVariables(Event event, long eventId)
   {
     try
     {
-      SQLiteDatabase localSQLiteDatabase = this.databaseHelper.getWritableDatabase();
-      CustomVariableBuffer localCustomVariableBuffer1 = paramEvent.getCustomVariableBuffer();
-      Object localObject;
+      SQLiteDatabase database = this.databaseHelper.getWritableDatabase();
+      CustomVariableBuffer eventCustomVariableBuffer = event.getCustomVariableBuffer();
+      
       if (this.useStoredVisitorVars)
       {
-        if (localCustomVariableBuffer1 == null)
+        if (eventCustomVariableBuffer == null)
         {
-          localCustomVariableBuffer1 = new CustomVariableBuffer();
-          paramEvent.setCustomVariableBuffer(localCustomVariableBuffer1);
+          eventCustomVariableBuffer = new CustomVariableBuffer();
+          event.setCustomVariableBuffer(eventCustomVariableBuffer);
         }
-        CustomVariableBuffer localCustomVariableBuffer2 = getVisitorVarBuffer();
+        CustomVariableBuffer visitorVariableBuffer = getVisitorVarBuffer();
         for (int j = 1; j <= 5; j++)
         {
-          localObject = localCustomVariableBuffer2.getCustomVariableAt(j);
-          CustomVariable localCustomVariable2 = localCustomVariableBuffer1.getCustomVariableAt(j);
-          if ((localObject == null) || (localCustomVariable2 != null))
+          CustomVariable visitorCustomVariable = visitorVariableBuffer.getCustomVariableAt(j);
+          CustomVariable eventCustomVariable = eventCustomVariableBuffer.getCustomVariableAt(j);
+          if ((visitorCustomVariable == null) || (eventCustomVariable != null))
             continue;
-          localCustomVariableBuffer1.setCustomVariable((CustomVariable)localObject);
+          eventCustomVariableBuffer.setCustomVariable(visitorCustomVariable);
         }
         this.useStoredVisitorVars = false;
       }
-      if (localCustomVariableBuffer1 != null)
+      if (eventCustomVariableBuffer != null)
         for (int i = 1; i <= 5; i++)
         {
-          if (localCustomVariableBuffer1.isIndexAvailable(i))
+          if (eventCustomVariableBuffer.isIndexAvailable(i))
             continue;
-          CustomVariable localCustomVariable1 = localCustomVariableBuffer1.getCustomVariableAt(i);
-          localObject = new ContentValues();
-          ((ContentValues)localObject).put("event_id", Long.valueOf(paramLong));
-          ((ContentValues)localObject).put("cv_index", Integer.valueOf(localCustomVariable1.getIndex()));
-          ((ContentValues)localObject).put("cv_name", localCustomVariable1.getName());
-          ((ContentValues)localObject).put("cv_scope", Integer.valueOf(localCustomVariable1.getScope()));
-          ((ContentValues)localObject).put("cv_value", localCustomVariable1.getValue());
-          localSQLiteDatabase.insert("custom_variables", "event_id", (ContentValues)localObject);
-          localSQLiteDatabase.update("custom_var_cache", (ContentValues)localObject, "cv_index=" + localCustomVariable1.getIndex(), null);
+          CustomVariable customVariable = eventCustomVariableBuffer.getCustomVariableAt(i);
+          ContentValues contentValues = new ContentValues();
+          contentValues.put("event_id", Long.valueOf(eventId));
+          contentValues.put("cv_index", Integer.valueOf(customVariable.getIndex()));
+          contentValues.put("cv_name", customVariable.getName());
+          contentValues.put("cv_scope", Integer.valueOf(customVariable.getScope()));
+          contentValues.put("cv_value", customVariable.getValue());
+          database.insert("custom_variables", "event_id", (ContentValues)contentValues);
+          database.update("custom_var_cache", (ContentValues)contentValues, "cv_index=" + customVariable.getIndex(), null);
         }
     }
-    catch (SQLiteException localSQLiteException)
+    catch (SQLiteException exception)
     {
-      Log.e("GoogleAnalyticsTracker", localSQLiteException.toString());
+      Log.e("GoogleAnalyticsTracker", exception.toString());
     }
   }
 
   CustomVariableBuffer getVisitorVarBuffer()
   {
-    CustomVariableBuffer localCustomVariableBuffer = new CustomVariableBuffer();
+    CustomVariableBuffer customVariableBuffer = new CustomVariableBuffer();
     try
     {
-      SQLiteDatabase localSQLiteDatabase = this.databaseHelper.getReadableDatabase();
-      Cursor localCursor = localSQLiteDatabase.query("custom_var_cache", null, "cv_scope=1", null, null, null, null);
-      while (localCursor.moveToNext())
+      SQLiteDatabase database = this.databaseHelper.getReadableDatabase();
+      Cursor cursor = database.query("custom_var_cache", null, "cv_scope=1", null, null, null, null);
+      while (cursor.moveToNext())
       {
-        CustomVariable localCustomVariable = new CustomVariable(localCursor.getInt(localCursor.getColumnIndex("cv_index")), localCursor.getString(localCursor.getColumnIndex("cv_name")), localCursor.getString(localCursor.getColumnIndex("cv_value")), localCursor.getInt(localCursor.getColumnIndex("cv_scope")));
-        localCustomVariableBuffer.setCustomVariable(localCustomVariable);
+        int index = cursor.getInt(cursor.getColumnIndex("cv_index"));
+		String name = cursor.getString(cursor.getColumnIndex("cv_name"));
+		String value = cursor.getString(cursor.getColumnIndex("cv_value"));
+		int scope = cursor.getInt(cursor.getColumnIndex("cv_scope"));
+		CustomVariable customVariable = new CustomVariable(index, name, value, scope);
+        customVariableBuffer.setCustomVariable(customVariable);
       }
-      localCursor.close();
+      cursor.close();
     }
     catch (SQLiteException localSQLiteException)
     {
       Log.e("GoogleAnalyticsTracker", localSQLiteException.toString());
     }
-    return localCustomVariableBuffer;
+    return customVariableBuffer;
   }
 
   public int getNumStoredEvents()
@@ -457,9 +474,9 @@ class PersistentEventStore
         this.compiledCountStatement = this.databaseHelper.getReadableDatabase().compileStatement("SELECT COUNT(*) from events");
       return (int)this.compiledCountStatement.simpleQueryForLong();
     }
-    catch (SQLiteException localSQLiteException)
+    catch (SQLiteException exception)
     {
-      Log.e("GoogleAnalyticsTracker", localSQLiteException.toString());
+      Log.e("GoogleAnalyticsTracker", exception.toString());
     }
     return 0;
   }
@@ -474,44 +491,44 @@ class PersistentEventStore
     this.sessionUpdated = false;
     this.useStoredVisitorVars = true;
     this.numStoredEvents = getNumStoredEvents();
-    Cursor localCursor = null;
+    Cursor cursor = null;
     try
     {
-      SQLiteDatabase localSQLiteDatabase = this.databaseHelper.getWritableDatabase();
-      localCursor = localSQLiteDatabase.query("session", null, null, null, null, null, null);
-      if (!localCursor.moveToFirst())
+      SQLiteDatabase database = this.databaseHelper.getWritableDatabase();
+      cursor = database.query("session", null, null, null, null, null, null);
+      if (!cursor.moveToFirst())
       {
-        long l = System.currentTimeMillis() / 1000L;
-        this.timestampFirst = l;
-        this.timestampPrevious = l;
-        this.timestampCurrent = l;
+        long now = System.currentTimeMillis() / 1000L;
+        this.timestampFirst = now;
+        this.timestampPrevious = now;
+        this.timestampCurrent = now;
         this.visits = 1;
         this.storeId = (new SecureRandom().nextInt() & 0x7FFFFFFF);
-        ContentValues localContentValues = new ContentValues();
-        localContentValues.put("timestamp_first", Long.valueOf(this.timestampFirst));
-        localContentValues.put("timestamp_previous", Long.valueOf(this.timestampPrevious));
-        localContentValues.put("timestamp_current", Long.valueOf(this.timestampCurrent));
-        localContentValues.put("visits", Integer.valueOf(this.visits));
-        localContentValues.put("store_id", Integer.valueOf(this.storeId));
-        localSQLiteDatabase.insert("session", "timestamp_first", localContentValues);
+        ContentValues contentValues = new ContentValues();
+        contentValues.put("timestamp_first", Long.valueOf(this.timestampFirst));
+        contentValues.put("timestamp_previous", Long.valueOf(this.timestampPrevious));
+        contentValues.put("timestamp_current", Long.valueOf(this.timestampCurrent));
+        contentValues.put("visits", Integer.valueOf(this.visits));
+        contentValues.put("store_id", Integer.valueOf(this.storeId));
+        database.insert("session", "timestamp_first", contentValues);
       }
       else
       {
-        this.timestampFirst = localCursor.getLong(0);
-        this.timestampPrevious = localCursor.getLong(2);
+        this.timestampFirst = cursor.getLong(0);
+        this.timestampPrevious = cursor.getLong(2);
         this.timestampCurrent = (System.currentTimeMillis() / 1000L);
-        this.visits = (localCursor.getInt(3) + 1);
-        this.storeId = localCursor.getInt(4);
+        this.visits = (cursor.getInt(3) + 1);
+        this.storeId = cursor.getInt(4);
       }
     }
-    catch (SQLiteException localSQLiteException)
+    catch (SQLiteException exception)
     {
-      Log.e("GoogleAnalyticsTracker", localSQLiteException.toString());
+      Log.e("GoogleAnalyticsTracker", exception.toString());
     }
     finally
     {
-      if (localCursor != null)
-        localCursor.close();
+      if (cursor != null)
+        cursor.close();
     }
   }
 
@@ -519,28 +536,28 @@ class PersistentEventStore
   {
     try
     {
-      SQLiteDatabase localSQLiteDatabase = this.databaseHelper.getWritableDatabase();
-      ContentValues localContentValues = new ContentValues();
-      localContentValues.put("timestamp_previous", Long.valueOf(this.timestampPrevious));
-      localContentValues.put("timestamp_current", Long.valueOf(this.timestampCurrent));
-      localContentValues.put("visits", Integer.valueOf(this.visits));
-      localSQLiteDatabase.update("session", localContentValues, "timestamp_first=?", new String[] { Long.toString(this.timestampFirst) });
+      SQLiteDatabase database = this.databaseHelper.getWritableDatabase();
+      ContentValues contentValues = new ContentValues();
+      contentValues.put("timestamp_previous", Long.valueOf(this.timestampPrevious));
+      contentValues.put("timestamp_current", Long.valueOf(this.timestampCurrent));
+      contentValues.put("visits", Integer.valueOf(this.visits));
+      database.update("session", contentValues, "timestamp_first=?", new String[] { Long.toString(this.timestampFirst) });
       this.sessionUpdated = true;
     }
-    catch (SQLiteException localSQLiteException)
+    catch (SQLiteException exception)
     {
-      Log.e("GoogleAnalyticsTracker", localSQLiteException.toString());
+      Log.e("GoogleAnalyticsTracker", exception.toString());
     }
   }
 
-  public void setReferrer(String paramString)
+  public void setReferrer(String referrer)
   {
     try
     {
-      SQLiteDatabase localSQLiteDatabase = this.databaseHelper.getWritableDatabase();
-      ContentValues localContentValues = new ContentValues();
-      localContentValues.put("referrer", paramString);
-      localSQLiteDatabase.insert("install_referrer", null, localContentValues);
+      SQLiteDatabase database = this.databaseHelper.getWritableDatabase();
+      ContentValues contentValues = new ContentValues();
+      contentValues.put("referrer", referrer);
+      database.insert("install_referrer", null, contentValues);
     }
     catch (SQLiteException localSQLiteException)
     {
@@ -550,27 +567,25 @@ class PersistentEventStore
 
   public String getReferrer()
   {
-    Cursor localCursor = null;
+    Cursor cursor = null;
     try
     {
-      SQLiteDatabase localSQLiteDatabase = this.databaseHelper.getReadableDatabase();
-      localCursor = localSQLiteDatabase.query("install_referrer", new String[] { "referrer" }, null, null, null, null, null);
-      String str1 = null;
-      if (localCursor.moveToFirst())
-        str1 = localCursor.getString(0);
-      String str2 = str1;
-      return str2;
+      SQLiteDatabase database = this.databaseHelper.getReadableDatabase();
+      cursor = database.query("install_referrer", new String[] { "referrer" }, null, null, null, null, null);
+      if (cursor.moveToFirst())
+        return cursor.getString(0);
+      else 
+    	return null;
     }
-    catch (SQLiteException localSQLiteException)
+    catch (SQLiteException exception)
     {
-      Log.e("GoogleAnalyticsTracker", localSQLiteException.toString());
-      String str1 = null;
-      return str1;
+      Log.e("GoogleAnalyticsTracker", exception.toString());
+      return null;
     }
     finally
     {
-      if (localCursor != null)
-        localCursor.close();
+      if (cursor != null)
+        cursor.close();
     }
   }
 
@@ -578,73 +593,73 @@ class PersistentEventStore
   {
     private final int databaseVersion;
 
-    public DataBaseHelper(Context paramContext)
+    public DataBaseHelper(Context context)
     {
-      this(paramContext, "google_analytics.db", 3);
+      this(context, "google_analytics.db", 3);
     }
 
-    public DataBaseHelper(Context paramContext, String paramString)
+    public DataBaseHelper(Context context, String name)
     {
-      this(paramContext, paramString, 3);
+      this(context, name, 3);
     }
 
-    DataBaseHelper(Context paramContext, String paramString, int paramInt)
+    DataBaseHelper(Context paramContext, String name, int databaseVersion)
     {
-      super(paramContext,paramString,(CursorFactory)null,paramInt);
-      this.databaseVersion = paramInt;
+      super(paramContext,name,(CursorFactory)null,databaseVersion);
+      this.databaseVersion = databaseVersion;
     }
 
-    public void onCreate(SQLiteDatabase paramSQLiteDatabase)
+    public void onCreate(SQLiteDatabase database)
     {
-      paramSQLiteDatabase.execSQL("DROP TABLE IF EXISTS events;");
-      paramSQLiteDatabase.execSQL(PersistentEventStore.CREATE_EVENTS_TABLE);
-      paramSQLiteDatabase.execSQL("DROP TABLE IF EXISTS session;");
-      paramSQLiteDatabase.execSQL(PersistentEventStore.CREATE_SESSION_TABLE);
-      paramSQLiteDatabase.execSQL("DROP TABLE IF EXISTS install_referrer;");
-      paramSQLiteDatabase.execSQL("CREATE TABLE install_referrer (referrer TEXT PRIMARY KEY NOT NULL);");
+      database.execSQL("DROP TABLE IF EXISTS events;");
+      database.execSQL(PersistentEventStore.CREATE_EVENTS_TABLE);
+      database.execSQL("DROP TABLE IF EXISTS session;");
+      database.execSQL(PersistentEventStore.CREATE_SESSION_TABLE);
+      database.execSQL("DROP TABLE IF EXISTS install_referrer;");
+      database.execSQL("CREATE TABLE install_referrer (referrer TEXT PRIMARY KEY NOT NULL);");
       if (this.databaseVersion > 1)
-        createCustomVariableTables(paramSQLiteDatabase);
+        createCustomVariableTables(database);
       if (this.databaseVersion > 2)
-        createECommerceTables(paramSQLiteDatabase);
+        createECommerceTables(database);
     }
 
-    void createCustomVariableTables(SQLiteDatabase paramSQLiteDatabase)
+    void createCustomVariableTables(SQLiteDatabase database)
     {
-      paramSQLiteDatabase.execSQL("DROP TABLE IF EXISTS custom_variables;");
-      paramSQLiteDatabase.execSQL(PersistentEventStore.CREATE_CUSTOM_VARIABLES_TABLE);
-      paramSQLiteDatabase.execSQL("DROP TABLE IF EXISTS custom_var_cache;");
-      paramSQLiteDatabase.execSQL(PersistentEventStore.CREATE_CUSTOM_VAR_CACHE_TABLE);
+      database.execSQL("DROP TABLE IF EXISTS custom_variables;");
+      database.execSQL(PersistentEventStore.CREATE_CUSTOM_VARIABLES_TABLE);
+      database.execSQL("DROP TABLE IF EXISTS custom_var_cache;");
+      database.execSQL(PersistentEventStore.CREATE_CUSTOM_VAR_CACHE_TABLE);
       for (int i = 1; i <= 5; i++)
       {
-        ContentValues localContentValues = new ContentValues();
-        localContentValues.put("event_id", Integer.valueOf(0));
-        localContentValues.put("cv_index", Integer.valueOf(i));
-        localContentValues.put("cv_name", "");
-        localContentValues.put("cv_scope", Integer.valueOf(3));
-        localContentValues.put("cv_value", "");
-        paramSQLiteDatabase.insert("custom_var_cache", "event_id", localContentValues);
+        ContentValues contentValues = new ContentValues();
+        contentValues.put("event_id", Integer.valueOf(0));
+        contentValues.put("cv_index", Integer.valueOf(i));
+        contentValues.put("cv_name", "");
+        contentValues.put("cv_scope", Integer.valueOf(3));
+        contentValues.put("cv_value", "");
+        database.insert("custom_var_cache", "event_id", contentValues);
       }
     }
 
-    private void createECommerceTables(SQLiteDatabase paramSQLiteDatabase)
+    private void createECommerceTables(SQLiteDatabase database)
     {
-      paramSQLiteDatabase.execSQL("DROP TABLE IF EXISTS transaction_events;");
-      paramSQLiteDatabase.execSQL(PersistentEventStore.CREATE_TRANSACTION_EVENTS_TABLE);
-      paramSQLiteDatabase.execSQL("DROP TABLE IF EXISTS item_events;");
-      paramSQLiteDatabase.execSQL(PersistentEventStore.CREATE_ITEM_EVENTS_TABLE);
+      database.execSQL("DROP TABLE IF EXISTS transaction_events;");
+      database.execSQL(PersistentEventStore.CREATE_TRANSACTION_EVENTS_TABLE);
+      database.execSQL("DROP TABLE IF EXISTS item_events;");
+      database.execSQL(PersistentEventStore.CREATE_ITEM_EVENTS_TABLE);
     }
 
-    public void onUpgrade(SQLiteDatabase paramSQLiteDatabase, int paramInt1, int paramInt2)
+    public void onUpgrade(SQLiteDatabase database, int oldVersion, int newVersion)
     {
-      if ((paramInt1 < 2) && (paramInt2 > 1))
-        createCustomVariableTables(paramSQLiteDatabase);
-      if ((paramInt1 < 3) && (paramInt2 > 2))
-        createECommerceTables(paramSQLiteDatabase);
+      if ((oldVersion < 2) && (newVersion > 1))
+        createCustomVariableTables(database);
+      if ((oldVersion < 3) && (newVersion > 2))
+        createECommerceTables(database);
     }
 
-    public void onDowngrade(SQLiteDatabase paramSQLiteDatabase, int paramInt1, int paramInt2)
+    public void onDowngrade(SQLiteDatabase database, int oldVersion, int newVersion)
     {
-      Log.w("GoogleAnalyticsTracker", "Downgrading database version from " + paramInt1 + " to " + paramInt2 + " not recommended.");
+      Log.w("GoogleAnalyticsTracker", "Downgrading database version from " + oldVersion + " to " + newVersion + " not recommended.");
     }
   }
 }
